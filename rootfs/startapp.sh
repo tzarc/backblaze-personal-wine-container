@@ -94,11 +94,27 @@ fetch_and_install() {
         log_message "INSTALLER: FORCE_LATEST_UPDATE=false - downloading pinned version $pinned_bz_version from archive.org"
         curl -A "$custom_user_agent" -L "$pinned_bz_version_url" --output "install_backblaze.exe" || handle_error "INSTALLER: error downloading from $pinned_bz_version_url"
     fi
-    log_message "INSTALLER: Starting install_backblaze.exe"
+
+    mkdir -p ${WINEPREFIX}drive_c/bz-extract \
+        && cd ${WINEPREFIX}drive_c/bz-extract \
+        && log_message "INSTALLER: Extracting install_backblaze.exe" \
+        && 7z e -y -i!cab1.cab "${install_exe_path}/install_backblaze.exe" \
+        && 7z e -y -i!cab2.cab "${install_exe_path}/install_backblaze.exe" \
+        && 7z e -y cab1.cab \
+        && 7z e -y cab2.cab \
+        && cd -
+
+    log_message "INSTALLER: Copying installation files"
+    mkdir -p "${WINEPREFIX}drive_c/Program Files (x86)/Backblaze/"
+    cp -rv ${WINEPREFIX}drive_c/bz-extract/* "${WINEPREFIX}drive_c/Program Files (x86)/Backblaze/"
+
+    log_message "INSTALLER: Starting bzdoinstall.exe"
     if [ -f "${WINEPREFIX}drive_c/Program Files (x86)/Backblaze/bzbui.exe" ]; then
-        WINEARCH="$WINEARCH" WINEPREFIX="$WINEPREFIX" wine64 "install_backblaze.exe" -nogui &
+        # WINEARCH="$WINEARCH" WINEPREFIX="$WINEPREFIX" wine64 "${install_exe_path}/install_backblaze.exe" -nogui &
+        WINEARCH="$WINEARCH" WINEPREFIX="$WINEPREFIX" wine64 "${WINEPREFIX}drive_c/bz-extract/bzdoinstall.exe" -doinstall "C:\\bz-extract\\" -nogui &
     else
-        WINEARCH="$WINEARCH" WINEPREFIX="$WINEPREFIX" wine64 "install_backblaze.exe" &
+        # WINEARCH="$WINEARCH" WINEPREFIX="$WINEPREFIX" wine64 "${install_exe_path}/install_backblaze.exe" &
+        WINEARCH="$WINEARCH" WINEPREFIX="$WINEPREFIX" wine64 "${WINEPREFIX}drive_c/bz-extract/bzdoinstall.exe" -doinstall "C:\\bz-extract\\" &
     fi
     log_message "INSTALLER: Waiting for installer to finish"
     # Wait for the installer to start
@@ -114,6 +130,7 @@ fetch_and_install() {
     # Now that the install is complete and the UI frozen, wait 30 seconds and restart the app
     sleep 30
     kill $(pgrep bzbui) $(pgrep bzdoinstall) $(pgrep install_backblaze)
+}
 
 start_app() {
     log_message "STARTAPP: Starting Backblaze version $(cat "$local_version_file")"

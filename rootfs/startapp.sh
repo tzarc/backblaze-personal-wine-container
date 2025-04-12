@@ -37,8 +37,9 @@ if [ ! -f "${WINEPREFIX}system.reg" ]; then
 fi
 
 #Configure Extra Mounts
-for x in {d..z}
+for x in d e f g h i j k l m n o p q r s t u v w x y z
 do
+    log_message "DRIVE: Checking for drive_${x} mount"
     if test -d "/drive_${x}" && ! test -d "${WINEPREFIX}dosdevices/${x}:"; then
         log_message "DRIVE: drive_${x} found but not mounted, mounting..."
         ln -s "/drive_${x}/" "${WINEPREFIX}dosdevices/${x}:"
